@@ -1,0 +1,85 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: serverless-order-api
+# app and org for use with dashboard.serverless.com
+app: order-api
+#org: your-org-name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: python3.8
+  region: us-east-2
+  
+  
+  lambdaHashingVersion: 20201221
+
+# you can overwrite defaults here
+  stage: dev
+#  region: us-east-1
+
+# you can add statements to the Lambda function's IAM Role here
+  environment:
+    DYNAMODB_TABLE: orders
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:BatchWriteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+
+
+
+functions:
+  load:
+    handler: orders/load_orders_data.load
+    events:
+      - http:
+          path: orders
+          method: post
+          cors: true  
+  list:
+    handler: orders/list.list
+    events:
+      - http:
+          path: orders
+          method: get
+          cors: true
+
+  
+resources:
+  Resources:
+    OrdersDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: order_no
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: order_no
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
